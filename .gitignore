@@ -1,0 +1,16 @@
+# Folders
+.settings/
+docs/
+freezedried_data/
+icons/
+installer/
+integration/
+misc/
+repast-licenses/
+
+# Files
+/*.csv
+*.log
+*.txt
+*.patch
+Repast.settings

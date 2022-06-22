@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<parameters>
+	<parameter name="randomSeed" displayName="Default Random Seed" type="int" 
+		defaultValue="__NULL__"
+		isReadOnly="false" 
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="anoInicioSimulacion" displayName="Ano inicial de simulacion"
+		type="int" defaultValue="2020" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="diasRetrasoEntradaCaso" displayName="Dias de retraso en entrada de infectados"
+		type="int" defaultValue="180" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="cantidadHumanosInfectados" displayName="Numero de Humanos infectados"
+		type="int" defaultValue="10" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="cantidadMosquitosInfectados" displayName="Numero de Mosquitos infectados"
+		type="int" defaultValue="10" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="cantHuevosIniciales" displayName="Cantidad huevos Iniciales" 
+		type="int"	defaultValue="20000" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
+		
+	<parameter name="cantAdultosIniciales" displayName="Cantidad mosquitos adultos Iniciales" 
+		type="int"	defaultValue="100" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/> <!-- 200 -->
+		
+	<parameter name="cantMediaPicaduras" displayName="Cantidad media de picaduras por ciclo"
+		type="int"	defaultValue="3" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
+		
+	<parameter name="cantidadMosquitosLimite" displayName="Tope de mosquitos adultos vivos (0 = ∞)"
+		type="int" defaultValue="200000" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+		
+	<parameter name="corridas" displayName="Cantidad de simulaciones que se quieren realizar"
+		type="int"	defaultValue="20" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
+</parameters>

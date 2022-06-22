@@ -1,0 +1,58 @@
+<repast.simphony.data2.engine.DataSetDescriptor simphonyVersion="2.8.0">
+  <name>Acuaticos</name>
+  <type>AGGREGATE</type>
+  <inclTick>true</inclTick>
+  <inclBatchRun>false</inclBatchRun>
+  <inclRandomSeed>false</inclRandomSeed>
+  <scheduleParams>
+    <start>0.0</start>
+    <interval>360.0</interval>
+    <priority>-Infinity</priority>
+    <pType>LAST</pType>
+    <duration>-1.0</duration>
+    <frequency>REPEAT</frequency>
+    <hashCode>1482966707</hashCode>
+  </scheduleParams>
+  <atEnd>false</atEnd>
+  <methodDataSources class="linked-hash-map">
+    <entry>
+      <string>Huevos</string>
+      <repast.simphony.data2.engine.MethodDataSourceDefinition>
+        <id>Huevos</id>
+        <className>geoaedes.agents.AquaticAgent</className>
+        <methodName>getEggsCount</methodName>
+        <aggType>SUM</aggType>
+      </repast.simphony.data2.engine.MethodDataSourceDefinition>
+    </entry>
+    <entry>
+      <string>Larvas</string>
+      <repast.simphony.data2.engine.MethodDataSourceDefinition>
+        <id>Larvas</id>
+        <className>geoaedes.agents.AquaticAgent</className>
+        <methodName>getLarvasCount</methodName>
+        <aggType>SUM</aggType>
+      </repast.simphony.data2.engine.MethodDataSourceDefinition>
+    </entry>
+    <entry>
+      <string>Pupas</string>
+      <repast.simphony.data2.engine.MethodDataSourceDefinition>
+        <id>Pupas</id>
+        <className>geoaedes.agents.AquaticAgent</className>
+        <methodName>getPupasCount</methodName>
+        <aggType>SUM</aggType>
+      </repast.simphony.data2.engine.MethodDataSourceDefinition>
+    </entry>
+    <entry>
+      <string>Total</string>
+      <repast.simphony.data2.engine.MethodDataSourceDefinition>
+        <id>Total</id>
+        <className>geoaedes.agents.AquaticAgent</className>
+        <methodName>getCount</methodName>
+        <aggType>SUM</aggType>
+      </repast.simphony.data2.engine.MethodDataSourceDefinition>
+    </entry>
+  </methodDataSources>
+  <countSources class="linked-hash-map"/>
+  <customNADataSources class="linked-hash-map"/>
+  <customAggDataSources class="linked-hash-map"/>
+</repast.simphony.data2.engine.DataSetDescriptor>
