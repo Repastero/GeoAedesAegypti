@@ -15,7 +15,7 @@ Ver método "switchHumanLocation" en clase ContextCreator.
 ## Display
 Para visualizar los **BuildingAgent** en tiempo de simulación (causa uso intensivo de CPU y GPU):
 ```
-Reemplazar el xml de display por: "repast.simphony.action.display_backup.xml" en GeoCOVID-19.rs/
+Reemplazar el xml de display por: "repast.simphony.action.display_backup.xml" en GeoAedesAegypti.rs/
 ```
 ## Notas
 Ver **TODOS** en código para mejoras o nuevas implementaciones que se pueden realizar.
