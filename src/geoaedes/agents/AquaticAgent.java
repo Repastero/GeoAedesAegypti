@@ -91,14 +91,7 @@ public class AquaticAgent {
 	public boolean updateLife() {
 		double rnd = RandomHelper.nextDoubleFromTo(0d, 1d);
 		if (DataSet.ENABLE_AQUATIC_MORTALITY && rnd < lifeCicle.getDeathRate()) {
-			// Acuatico muere
-			if (getLifeCicle() == 0) { // Huevo
-				container.decreaseEggsAmount();
-			}
-			else // Larva o Pupa
-				container.decreaseAquaticAmount();
-			lifeCicle.eliminate();
-			--agentCount;
+			eliminate();
 			return false;
 		}
 		else {
@@ -132,6 +125,20 @@ public class AquaticAgent {
 			molt();
 		else // (lifeCicle instanceof Pupa)
 			emerge();
+	}
+	
+	/**
+	 * Mata Acuatico en Container.
+	 */
+	public void eliminate() {
+		// Acuatico muere
+		if (getLifeCicle() == 0) { // Huevo
+			container.decreaseEggsAmount();
+		}
+		else // Larva o Pupa
+			container.decreaseAquaticAmount();
+		lifeCicle.eliminate();
+		--agentCount;
 	}
 
 	/**

@@ -27,7 +27,7 @@
 		
 	<parameter name="cantAdultosIniciales" displayName="Cantidad mosquitos adultos Iniciales" 
 		type="int"	defaultValue="100" isReadOnly="false"
-		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/> <!-- 200 -->
+		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
 		
 	<parameter name="cantMediaPicaduras" displayName="Cantidad media de picaduras por ciclo"
 		type="int"	defaultValue="3" isReadOnly="false"
@@ -40,4 +40,20 @@
 	<parameter name="corridas" displayName="Cantidad de simulaciones que se quieren realizar"
 		type="int"	defaultValue="20" isReadOnly="false"
 		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
+		
+	<parameter name="diasEliminarContenedores" displayName="Dias de descacharrizacion"
+		type="string" defaultValue="150 180 210" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$StringStringConverter"/>
+		
+	<parameter name="porcEliminarContenedores" displayName="Dias de descacharrizacion Porcentaje"
+		type="string" defaultValue="15 10 5" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$StringStringConverter"/>
+	
+	<parameter name="diasAgregarContenedores" displayName="Dias de cacharrizacion"
+		type="string" defaultValue="30 60 90" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$StringStringConverter"/>
+		
+	<parameter name="porcAgregarContenedores" displayName="Dias de cacharrizacion Porcentaje"
+		type="string" defaultValue="15 10 5" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$StringStringConverter"/>
 </parameters>

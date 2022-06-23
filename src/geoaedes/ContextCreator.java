@@ -7,12 +7,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.opengis.feature.simple.SimpleFeature;
 
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 
 import cern.jet.random.Normal;
@@ -45,23 +43,43 @@ public class ContextCreator implements ContextBuilder<Object> {
 	private Geography<Object> geography; // Puntero
 	
 	// Parametros de simulacion
+	/** Ano simulacion, para calcular leer datos climaticos (minimo 2010) */
 	private int simulationStartYear;
+	/** Cantidad de mosquitos adultos vivos que debe superarse para finalizar simulacion (0 = Infinito) */
 	private int adultMosquitosLimit;
+	/** Dias de demora en entrada de infectados */
 	private int obStartDelayDays;
+	/** Cantidad de infectados iniciales humanos */
 	private int firstInfHumans;
+	/** Cantidad de infectados iniciales mosquitos adultos */
 	private int firstInfMosquitoes;
+	/** Cantidad inicial de huevos */
 	private int startingEggsAmount;
+	/** Cantidad inicial de mosquitos adultos */
 	private int startingAdultsAmount;
+	/** Cantidad inicial de contenedores positivos */
 	private int startingPosCtnrAmount;
+	/** Cantidad media de picaduras por ciclo */
 	private int mosquitoBitesMean;
+	/** Cantidad de corridas para hacer en batch */
 	private int simulationRun;
+	/** Dias en que se eliminan contenedores */
+	private int[] containersRemoveDays;
+	/** Porcentaje (en base a cant. inicial) de contenedores eliminados por dia */
+	private int[] containersRemovePct;
+	/** Dias en que se agregan contenedores */
+	private int[] containersAddDays;
+	/** Porcentaje (en base a cant. inicial) de contenedores agregados por dia */
+	private int[] containersAddPct;
 	//
 	
 	/** Tiempo inicio de simulacion */
 	private long simulationStartTime;
 	
-	private int localHumansCount;		// Cantidad de humanos que viven en contexto
-	private int foreignHumansCount;		// Cantidad de humanos que viven fuera del contexto
+	/** Cantidad de humanos que viven en contexto */
+	private int localHumansCount;
+	/** Cantidad de humanos que viven fuera del contexto */
+	private int foreignHumansCount;
 	
 	private int lastHomeId;	// Para no repetir ids, al crear hogares ficticios
 	private List<List<HomeAgent>> homePlaces;	// Lista de hogares en cada seccional
@@ -76,15 +94,23 @@ public class ContextCreator implements ContextBuilder<Object> {
 	private Map<String, PlaceProperty> placesProperty = new HashMap<>(); // Lista de atributos de cada tipo de Place
 	private BuildingManager buildingManager;
 	
-	private int containersCount;// Total de contenedores
-	private int studentCount;	// Total de estudiantes
-	private int workerCount;	// Total de trabajadores
-	private int inactiveCount;	// Total de inactivos
+	/** Cantidad inicial de contenedores exteriores */
+	private int outdoorCtnrCount;
+	/** Total de estudiantes */
+	private int studentCount;
+	/** Total de trabajadores */
+	private int workerCount;
+	/** Total de inactivos */
+	private int inactiveCount;
+	/** Contador de ocupaciones */
 	private int[] occupationCount;
-	private int unemployedCount;// Contador de empleos faltantes
-	private int unschooledCount;// Contador de bancos de estudios faltantes
+	/** Contador de empleos faltantes */
+	private int unemployedCount;
+	/** Contador de bancos de estudios faltantes */
+	private int unschooledCount;
 	
-	static final boolean DEBUG_MSG = false;	// Flag para imprimir valores de inicializacion
+	/** Flag para imprimir valores de inicializacion */
+	static final boolean DEBUG_MSG = false;
 	
 	public ContextCreator() {
 		// Para corridas en batch imprime fecha de compilacion
@@ -103,6 +129,7 @@ public class ContextCreator implements ContextBuilder<Object> {
 		// Programa metodo para fin de simulacion - para imprimir reporte final
 		params = ScheduleParameters.createAtEnd(ScheduleParameters.LAST_PRIORITY);
 		schedule.schedule(params, this, "printSimulationDuration");
+		schedule.schedule(params, this, "cleanupContainersList");
 		
 		// Crear la proyeccion para almacenar los agentes GIS (EPSG:4326).
 		GeographyParameters<Object> geoParams = new GeographyParameters<Object>();
@@ -146,12 +173,13 @@ public class ContextCreator implements ContextBuilder<Object> {
 		homePlaces.clear();
 		workPlaces.clear();
 		schoolPlaces.clear();
-		indoorContainers.clear();
-		outdoorContainers.clear();
+		
+		// Programar des/cacharrizacion
+		scheduleContainersControl();
 		
 		// Programar movimiento de Humanos
-		//params = ScheduleParameters.createRepeating(0, 3, 0.5); // valor por defecto - (3 ticks = 6 minutos)
-		params = ScheduleParameters.createRepeating(0, 9, 0.5); // valor para acelerar la simulacion - (9 ticks = 18 minutos)
+		params = ScheduleParameters.createRepeating(0, 3, 0.5); // valor por defecto - (3 ticks = 6 minutos)
+		//params = ScheduleParameters.createRepeating(0, 9, 0.5); // valor para acelerar la simulacion - (9 ticks = 18 minutos)
 		schedule.schedule(params, this, "switchHumanLocation");
 		
 		return context;
@@ -182,6 +210,11 @@ public class ContextCreator implements ContextBuilder<Object> {
 				simulationStartYear, simulationRun, RandomHelper.getSeed(), (simTime / (double)(1000*60)));
 	}
 	
+	public void cleanupContainersList() {
+		indoorContainers.clear();
+		outdoorContainers.clear();
+	}
+	
 	/**
 	 * Selecciona al azar la cantidad de Humanos y Mosquitos seteada en los parametros y los infecta.
 	 */
@@ -198,24 +231,24 @@ public class ContextCreator implements ContextBuilder<Object> {
 	 */
 	private void setBachParameters() {
 		Parameters params = RunEnvironment.getInstance().getParameters();
-		// Ano simulacion, para calcular leer datos climaticos (minimo 2010)
 		simulationStartYear	= ((Integer) params.getValue("anoInicioSimulacion")).intValue();
-		// Cantidad de mosquitos adultos vivos que debe superarse para finalizar simulacion (0 = Infinito)
 		adultMosquitosLimit	= ((Integer) params.getValue("cantidadMosquitosLimite")).intValue();
-		// Dias de demora en entrada de infectados
 		obStartDelayDays	= ((Integer) params.getValue("diasRetrasoEntradaCaso")).intValue();
-		// Cantidad de infectados iniciales humanos
 		firstInfHumans		= ((Integer) params.getValue("cantidadHumanosInfectados")).intValue();
-		// Cantidad de infectados iniciales mosquitos adultos
 		firstInfMosquitoes	= ((Integer) params.getValue("cantidadMosquitosInfectados")).intValue();
-		// Cantidad inicial de huevos en contenedores al exterior
 		startingEggsAmount	= ((Integer) params.getValue("cantHuevosIniciales")).intValue();
-		// Cantidad inicial de mosquitos adultos
 		startingAdultsAmount= ((Integer) params.getValue("cantAdultosIniciales")).intValue();
-		// Cantidad media de picaduras por ciclo
 		mosquitoBitesMean	= ((Integer) params.getValue("cantMediaPicaduras")).intValue();
-		// Cantidad de corridas para hacer en batch
 		simulationRun		= ((Integer) params.getValue("corridas")).intValue();
+		// Parametros de eliminacion y creacion de cacharros //
+		String tempStr		= ((String) params.getValue("diasEliminarContenedores"));
+		containersRemoveDays= Utils.getIntArrayFromString(tempStr, " ");
+		tempStr				= ((String) params.getValue("porcEliminarContenedores"));
+		containersRemovePct	= Utils.getIntArrayFromString(tempStr, " ");
+		tempStr				= ((String) params.getValue("diasAgregarContenedores"));
+		containersAddDays	= Utils.getIntArrayFromString(tempStr, " ");
+		tempStr				= ((String) params.getValue("porcAgregarContenedores"));
+		containersAddPct	= Utils.getIntArrayFromString(tempStr, " ");
 	}
 	
 	/**
@@ -602,7 +635,7 @@ public class ContextCreator implements ContextBuilder<Object> {
 	 */
 	private void initContainers() {
 		ContainerAgent.initAgentID(); // Reiniciar ID de contenedores
-		containersCount = 0;
+		cleanupContainersList();
 		
 		double areaMean = DataSet.CONTAINER_AREA_MEAN;
 		double areaStd = DataSet.CONTAINER_AREA_DEVIATION;
@@ -621,8 +654,7 @@ public class ContextCreator implements ContextBuilder<Object> {
 		for (int i = 0; i < DataSet.SECTORALS_COUNT; i++)
 			ndContainersPerHouse[i] = RandomHelper.createNormal(DataSet.CONTAINERS_PER_HOUSE_MEAN[i], DataSet.CONTAINERS_PER_HOUSE_DEVIATION[i]);
 		
-		Stream<Object> iteral = context.getObjectsAsStream(BuildingAgent.class);
-		iteral.forEach(building -> {
+		context.getObjectsAsStream(BuildingAgent.class).forEach(building -> {
 	    	final BuildingAgent tempBuilding = (BuildingAgent) building;
 	    	if (tempBuilding.isMosquitoesExcluded())
 	    		return;
@@ -641,11 +673,13 @@ public class ContextCreator implements ContextBuilder<Object> {
 				if (contIndoor)	indoorContainers.add(container);
 				else			outdoorContainers.add(container);
 				context.add(container);
-				++containersCount;
 			}
 		});
-		if (DEBUG_MSG)
-			System.out.println("CANTIDAD CONTAINERS: " + containersCount);
+		outdoorCtnrCount = outdoorContainers.size();
+		if (DEBUG_MSG) {
+			System.out.println("CANTIDAD CONTAINERS INTERIOR: " + indoorContainers.size());
+			System.out.println("CANTIDAD CONTAINERS EXTERIOR: " + outdoorCtnrCount);
+		}
 	}
 	
 	private void initEggs() {
@@ -717,6 +751,93 @@ public class ContextCreator implements ContextBuilder<Object> {
 			tempMosquito = new MosquitoAgent(building);
 			context.add(tempMosquito);
 		}
+	}
+	
+	/**
+	 * Programar des/cacharrizacion segun los dias y porcentajes leidos en parametros.
+	 */
+	private void scheduleContainersControl() {
+		ScheduleParameters params;
+		// Programa las acciones de descacharrizacion
+		if (containersRemoveDays.length == containersRemovePct.length) {
+			for (int i = 0; i < containersRemoveDays.length; i++) {
+				params = ScheduleParameters.createOneTime(containersRemoveDays[i] * 360, ScheduleParameters.FIRST_PRIORITY);
+				schedule.schedule(params, this, "removeContainers", i);
+			}
+		}
+		else
+			System.err.println("Cantidad de dias en que se eliminan contenedores != porcentaje");
+		// Programa las acciones de cacharrizacion
+		if (containersAddDays.length == containersAddPct.length) {
+			for (int i = 0; i < containersAddDays.length; i++) {
+				params = ScheduleParameters.createOneTime(containersAddDays[i] * 360, ScheduleParameters.FIRST_PRIORITY);
+				schedule.schedule(params, this, "addContainers", i);
+			}
+		}
+		else
+			System.err.println("Cantidad de dias en que se agregan contenedores != porcentaje");
+	}
+	
+	/**
+	 * Elimina aleatoriamente contenedores al exterior, matando los acuaticos que contengan.
+	 * @param index en el listado de dias
+	 */
+	public void removeContainers(int index) {
+		int ctnrCount = outdoorContainers.size();
+		int rndIndex;
+		ContainerAgent container;
+		// Paso porcentaje a cantidad
+		containersRemovePct[index] *= outdoorCtnrCount / 100;
+		while (containersRemovePct[index] > 0 && ctnrCount > 0) {
+			rndIndex = RandomHelper.nextIntFromTo(0, ctnrCount - 1);
+			container = outdoorContainers.remove(rndIndex);
+	    	container.remove();
+	    	--containersRemovePct[index];
+	    	--ctnrCount;
+		}
+		if (DEBUG_MSG)
+			System.out.println("Cantidad de contenedores al exterior reducida: " + outdoorContainers.size());
+	}
+	
+	/**
+	 * Crea nuevos contenedores al exterior y los distribuye aleatoriamente en parcelas.
+	 * @param index en el listado de dias
+	 */
+	public void addContainers(int index) {
+		double areaMean = DataSet.CONTAINER_AREA_MEAN;
+		double areaStd = DataSet.CONTAINER_AREA_DEVIATION;
+		double heightMean = DataSet.CONTAINER_HEIGHT_MEAN;
+		double heightStd = DataSet.CONTAINER_HEIGHT_DEVIATION;
+		
+	    // Dist. normal area de containers
+	    final Normal ndContainerArea = RandomHelper.createNormal(areaMean, areaStd);
+	    // Dist. normal altura de containers
+	    final Normal ndContainerHeight = RandomHelper.createNormal(heightMean, heightStd);
+		
+		// Paso porcentaje a cantidad
+		containersAddPct[index] *= outdoorCtnrCount / 100;
+		context.getRandomObjectsAsStream(BuildingAgent.class, Long.MAX_VALUE).forEach(bldg -> {
+	    	if (containersAddPct[index] == 0)
+	    		return;
+	    	final BuildingAgent building = (BuildingAgent) bldg;
+	    	// Solo agrega containers donde es posible y en exteriores
+	    	if (building.isMosquitoesExcluded())
+	    		return;
+			double contArea = ndContainerArea.nextDouble();
+			double contHeight = ndContainerHeight.nextDouble();
+			// Limito el valor de area y altura a la media + desvio
+			// por que si no dan valores negativos y no entra ni un huevo 
+			contArea = Utils.limitStandardDeviation(contArea, areaMean, areaStd);
+			contHeight = Utils.limitStandardDeviation(contHeight, heightMean, heightStd);
+			//
+			ContainerAgent container = new ContainerAgent(building, false, contArea, contHeight);
+			building.insertContainer(container);
+			outdoorContainers.add(container);
+			context.add(container);
+			--containersAddPct[index];
+		});
+		if (DEBUG_MSG)
+			System.out.println("Cantidad de contenedores al exterior incrementada: " + outdoorContainers.size());
 	}
 	
 	/**

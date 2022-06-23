@@ -21,6 +21,28 @@ import repast.simphony.random.RandomHelper;
 public final class Utils {
 	
 	/**
+	 * Convierte String con enteros a array de enteros. 
+	 * @param values String con enteros separados por <code>separator</code>
+	 * @param separator String separador de enteros en <code>values</code>
+	 * @return <b>int[]</b> array con valores enteros o vacio
+	 */
+	public static int[] getIntArrayFromString(String values, String separator) {
+		if (values.isBlank())
+			return new int[0];
+		String[] items = values.split(separator);
+		int[] results = new int[items.length];
+		for (int i = 0; i < items.length; i++) {
+		    try {
+		        results[i] = Integer.parseInt(items[i]);
+		    } catch (NumberFormatException e) {
+		    	System.err.println("Error valor entero: " + items[i]);
+		    	return new int[0];
+		    }
+		}
+		return results;
+	}
+	
+	/**
 	 * Genera un valor aleatorio de la distribucion normal y lo limita al desvio.
 	 * @param mean media
 	 * @param std desvio estandar

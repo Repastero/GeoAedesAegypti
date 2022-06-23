@@ -1,6 +1,7 @@
 package geoaedes.agents;
 
 import static repast.simphony.essentials.RepastEssentials.AddAgentToContext;
+import static repast.simphony.essentials.RepastEssentials.RemoveAgentFromContext;
 import static repast.simphony.essentials.RepastEssentials.GetTickCount;
 
 import java.util.ArrayList;
@@ -205,5 +206,19 @@ public class ContainerAgent {
 	public void emergeMosquito() {
 		MosquitoAgent adult = new MosquitoAgent(building);
 		AddAgentToContext("GeoAedesAegypti", adult);
+	}
+	
+	/**
+	 * Elimina Container del modelo / contexto.
+	 */
+	public void remove() {
+		// Mata todos los acuaticos
+		aquaticsList.forEach(aqua -> aqua.eliminate());
+		// Elimina referencias a objetos acuaticos
+		aquaticsList.clear();
+		// Elimina del listado de contenedores de parcela
+		building.removeContainer(this);
+		// Elimina del contexto
+		RemoveAgentFromContext("GeoAedesAegypti", this);
 	}
 }

@@ -128,6 +128,14 @@ public class BuildingAgent {
 			++outdoorContainers;
 	}
 	
+	public void removeContainer(ContainerAgent container) {
+		if (container.isIndoors())
+			--indoorContainers;
+		else
+			--outdoorContainers;
+		containersList.remove(container);
+	}
+	
 	public int getIndoorCntrAmount() {
 		return indoorContainers;
 	}
