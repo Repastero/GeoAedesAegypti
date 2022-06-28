@@ -18,4 +18,9 @@ Para visualizar los **BuildingAgent** en tiempo de simulación (causa uso intens
 Reemplazar el xml de display por: "repast.simphony.action.display_backup.xml" en GeoAedesAegypti.rs/
 ```
 ## Notas
-Ver **TODOS** en código para mejoras o nuevas implementaciones que se pueden realizar.
+Ver **TODOs** en código para mejoras o nuevas implementaciones que se pueden realizar.
+
+Para correr modelo desde un script batch, es necesario agregar el siguiente parámetro al ejecutar java:
+```
+-Djava.util.Arrays.useLegacyMergeSort=true
+```

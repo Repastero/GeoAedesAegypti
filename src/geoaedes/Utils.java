@@ -27,7 +27,7 @@ public final class Utils {
 	 * @return <b>int[]</b> array con valores enteros o vacio
 	 */
 	public static int[] getIntArrayFromString(String values, String separator) {
-		if (values.isBlank())
+		if (values.trim().isEmpty())
 			return new int[0];
 		String[] items = values.split(separator);
 		int[] results = new int[items.length];
