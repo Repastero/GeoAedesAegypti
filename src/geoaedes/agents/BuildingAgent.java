@@ -3,7 +3,6 @@ package geoaedes.agents;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
-import java.util.Collections;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
@@ -23,11 +22,12 @@ public class BuildingAgent {
 	private String type;
 	private int area;
 	private int coveredArea;
+	private boolean workingPlace;
 	// Atributos de dimensiones
 	private int capacity;
 	private boolean outdoor;
 	/** Si el inmueble esta en un pizo elevado o area sin construir */
-	private boolean mosquitoesExcluded = false;
+	private boolean mosquitoesExcluded;
 	/** Para la grafica del SLD */
 	private int mosquitoesAmount = 0;
 	private int infectedHumans = 0;
@@ -55,6 +55,7 @@ public class BuildingAgent {
 	public BuildingAgent(int secIndex, Coordinate coord, int id, int blockId, char condition, String type, int area, int coveredArea, boolean isWorkplace) {
 		// Constructor Home/Workplace
 		this(secIndex, coord, id, blockId, condition, type, area, coveredArea);
+		this.workingPlace = isWorkplace;
 	}
 	
 	private void setCapacity() {
@@ -109,15 +110,6 @@ public class BuildingAgent {
 		return containersList.stream()
 				.filter(ctnr -> ((ContainerAgent) ctnr).canCarryMoreEggs())
 				.collect(Collectors.toList());
-	}
-	
-	/**
-	 * Mezcla y retorna los containers en el inmueble.
-	 * @return lista de ContainerAgent
-	 */
-	public List<ContainerAgent> getShuffledContainers() {
-		Collections.shuffle(containersList);
-		return containersList;
 	}
 	
 	public void insertContainer(ContainerAgent container) {
@@ -214,5 +206,9 @@ public class BuildingAgent {
 	
 	public boolean isOutdoor() {
 		return outdoor;
+	}
+	
+	public boolean isWorkplace() {
+		return workingPlace;
 	}
 }

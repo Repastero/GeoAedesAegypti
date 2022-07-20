@@ -9,20 +9,16 @@
 		type="int" defaultValue="2020" isReadOnly="false"
 		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
 		
-	<parameter name="diasRetrasoEntradaCaso" displayName="Dias de retraso en entrada de infectados"
-		type="int" defaultValue="180" isReadOnly="false"
-		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+	<parameter name="fracHumanosInfectados" displayName="Frac. de poblacion viajeros infectados anual"
+		type="double" defaultValue=".001" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter" />
 		
-	<parameter name="cantidadHumanosInfectados" displayName="Numero de Humanos infectados"
-		type="int" defaultValue="10" isReadOnly="false"
-		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
-		
-	<parameter name="cantidadMosquitosInfectados" displayName="Numero de Mosquitos infectados"
-		type="int" defaultValue="10" isReadOnly="false"
-		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
+	<parameter name="fracMosquitosInfectados" displayName="Frac. de poblacion turistas infectados anual"
+		type="double" defaultValue=".002" isReadOnly="false"
+		converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter" />
 		
 	<parameter name="cantHuevosIniciales" displayName="Cantidad huevos Iniciales" 
-		type="int"	defaultValue="20000" isReadOnly="false"
+		type="int"	defaultValue="100000" isReadOnly="false"
 		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
 		
 	<parameter name="cantAdultosIniciales" displayName="Cantidad mosquitos adultos Iniciales" 
@@ -34,7 +30,7 @@
 		converter="repast.simphony.parameter.StringConverterFactory$IntConverter"/>
 		
 	<parameter name="cantidadMosquitosLimite" displayName="Tope de mosquitos adultos vivos (0 = ∞)"
-		type="int" defaultValue="200000" isReadOnly="false"
+		type="int" defaultValue="700000" isReadOnly="false"
 		converter="repast.simphony.parameter.StringConverterFactory$IntConverter" />
 		
 	<parameter name="corridas" displayName="Cantidad de simulaciones que se quieren realizar"

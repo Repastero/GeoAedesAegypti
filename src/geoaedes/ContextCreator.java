@@ -47,12 +47,10 @@ public class ContextCreator implements ContextBuilder<Object> {
 	private int simulationStartYear;
 	/** Cantidad de mosquitos adultos vivos que debe superarse para finalizar simulacion (0 = Infinito) */
 	private int adultMosquitosLimit;
-	/** Dias de demora en entrada de infectados */
-	private int obStartDelayDays;
-	/** Cantidad de infectados iniciales humanos */
-	private int firstInfHumans;
-	/** Cantidad de infectados iniciales mosquitos adultos */
-	private int firstInfMosquitoes;
+	/** Fraccion de poblacion convertida en viajeros locales infectados */
+	private double fracOfInfHumans;
+	/** Fraccion de poblacion convertida en turistas infectados */
+	private double fracOfInfMosquitoes;
 	/** Cantidad inicial de huevos */
 	private int startingEggsAmount;
 	/** Cantidad inicial de mosquitos adultos */
@@ -73,6 +71,13 @@ public class ContextCreator implements ContextBuilder<Object> {
 	private int[] containersAddPct;
 	//
 	
+	/** Indice semanal anual */
+	private int   simumationWeekIndex;
+	/** Cantidad de nuevos humanos infectados semanalmente */
+	private int[] humansInfEveryWeek;
+	/** Cantidad de nuevos mosquitos infectados semanalmente */
+	private int[] mosquitoesInfEveryWeek;
+	
 	/** Tiempo inicio de simulacion */
 	private long simulationStartTime;
 	
@@ -86,6 +91,10 @@ public class ContextCreator implements ContextBuilder<Object> {
 	private List<WorkplaceAgent> workPlaces = new ArrayList<WorkplaceAgent>();		// Lista de lugares de trabajo
 	private List<WorkplaceAgent> schoolPlaces = new ArrayList<WorkplaceAgent>();	// Lista de lugares de estudio
 	
+	/** Buildings en general, donde pueden habitar mosquitos */
+	private List<BuildingAgent> susceptibleBuildings = new ArrayList<BuildingAgent>();
+	/** Indice inicial y final de places en susceptibleBuildings */
+	private int[] susceptiblePlacesIdx;
 	/** Containers en interiores */
 	private List<ContainerAgent> indoorContainers = new ArrayList<ContainerAgent>();
 	/** Containers en exteriores */
@@ -129,7 +138,7 @@ public class ContextCreator implements ContextBuilder<Object> {
 		// Programa metodo para fin de simulacion - para imprimir reporte final
 		params = ScheduleParameters.createAtEnd(ScheduleParameters.LAST_PRIORITY);
 		schedule.schedule(params, this, "printSimulationDuration");
-		schedule.schedule(params, this, "cleanupContainersList");
+		schedule.schedule(params, this, "cleanupLists");
 		
 		// Crear la proyeccion para almacenar los agentes GIS (EPSG:4326).
 		GeographyParameters<Object> geoParams = new GeographyParameters<Object>();
@@ -138,10 +147,6 @@ public class ContextCreator implements ContextBuilder<Object> {
 		setBachParameters(); // Lee parametros de simulacion
 		// La simulacion termina a los 365 dias
 		RunEnvironment.getInstance().endAt(365 * 360);
-		
-		// Schedule one shot para agregar infectados
-		params = ScheduleParameters.createOneTime(obStartDelayDays * 360, ScheduleParameters.FIRST_PRIORITY);
-		schedule.schedule(params, this, "infectRandos");
 		
 		// Crea BuildingManager para esta ciudad
 		BuildingManager.setMainContextAndGeography(context, geography);
@@ -174,6 +179,8 @@ public class ContextCreator implements ContextBuilder<Object> {
 		workPlaces.clear();
 		schoolPlaces.clear();
 		
+		// Programar ingreso de infectados
+		scheduleInfectedArrival();
 		// Programar des/cacharrizacion
 		scheduleContainersControl();
 		
@@ -206,24 +213,35 @@ public class ContextCreator implements ContextBuilder<Object> {
 		System.out.printf("Cont. pos. Iniciales: %d | Finales: %d | Max. Adultos por cont.: %.2f%n",
 				startingPosCtnrAmount, InfectionReport.getPositiveContainers(), InfectionReport.getMaxAdultsPerContainer());
 		final long simTime = System.currentTimeMillis() - simulationStartTime;
-		System.out.printf("Año: %4d | Simulacion: %4d | Seed: %d | Tiempo: %.2f minutos%n",
-				simulationStartYear, simulationRun, RandomHelper.getSeed(), (simTime / (double)(1000*60)));
+		System.out.printf("Año: %4d | Simulacion: %4d | Seed: %d | Tiempo: %.2f horas%n",
+				simulationStartYear, simulationRun, RandomHelper.getSeed(), (simTime / (double)(1000*60*60)));
 	}
 	
-	public void cleanupContainersList() {
+	public void cleanupLists() {
+		// Limpiar lista de susceptible e indice places
+		susceptibleBuildings.clear();
+		susceptiblePlacesIdx = null;
+		// Limpiar listas de contenedores
 		indoorContainers.clear();
 		outdoorContainers.clear();
 	}
 	
 	/**
-	 * Selecciona al azar la cantidad de Humanos y Mosquitos seteada en los parametros y los infecta.
+	 * Infecta Humanos y Mosquitos aleatoriamente, segun la semana actual.<p>
+	 * Actualiza indice de semana de simulacion.
 	 */
 	public void infectRandos() {
-		context.getRandomObjectsAsStream(HumanAgent.class, firstInfHumans)
-			.forEach(h -> ((HumanAgent) h).setInfectious(true));
-		// TODO ver: que hacer si no alcanzan los mosquitos adultos a infectar
-		context.getRandomObjectsAsStream(MosquitoAgent.class, firstInfMosquitoes)
-			.forEach(m -> ((MosquitoAgent) m).infectTransmitter());
+		// Humanos
+		int newInfected = humansInfEveryWeek[simumationWeekIndex];
+		if (newInfected > 0)
+			context.getRandomObjectsAsStream(HumanAgent.class, newInfected)
+				.forEach(h -> ((HumanAgent) h).setInfectious(true));
+		// Mosquitos adultos
+		newInfected = mosquitoesInfEveryWeek[simumationWeekIndex];
+		if (newInfected > 0)
+			addInfectedMosquitos(newInfected);
+		if (++simumationWeekIndex >= 48)
+			simumationWeekIndex = 0;
 	}
 	
 	/**
@@ -233,9 +251,8 @@ public class ContextCreator implements ContextBuilder<Object> {
 		Parameters params = RunEnvironment.getInstance().getParameters();
 		simulationStartYear	= ((Integer) params.getValue("anoInicioSimulacion")).intValue();
 		adultMosquitosLimit	= ((Integer) params.getValue("cantidadMosquitosLimite")).intValue();
-		obStartDelayDays	= ((Integer) params.getValue("diasRetrasoEntradaCaso")).intValue();
-		firstInfHumans		= ((Integer) params.getValue("cantidadHumanosInfectados")).intValue();
-		firstInfMosquitoes	= ((Integer) params.getValue("cantidadMosquitosInfectados")).intValue();
+		fracOfInfHumans		= ((Double)  params.getValue("fracHumanosInfectados")).doubleValue();
+		fracOfInfMosquitoes	= ((Double)  params.getValue("fracMosquitosInfectados")).doubleValue();
 		startingEggsAmount	= ((Integer) params.getValue("cantHuevosIniciales")).intValue();
 		startingAdultsAmount= ((Integer) params.getValue("cantAdultosIniciales")).intValue();
 		mosquitoBitesMean	= ((Integer) params.getValue("cantMediaPicaduras")).intValue();
@@ -292,8 +309,10 @@ public class ContextCreator implements ContextBuilder<Object> {
 				sectoralIdx = sectoral - 1;
 				tempBuilding = new HomeAgent(sectoralIdx, geom.getCoordinate(), id, block, condition);
 				homePlaces.get(sectoralIdx).add(tempBuilding);
-				if (!tempBuilding.isMosquitoesExcluded())
+				if (!tempBuilding.isMosquitoesExcluded()) {
+					susceptibleBuildings.add(tempBuilding);
 					buildingManager.addBuildingToBlock(block, tempBuilding);
+				}
 				context.add(tempBuilding);
 				geography.move(tempBuilding, geom);
 			}
@@ -313,7 +332,9 @@ public class ContextCreator implements ContextBuilder<Object> {
 		// Reinicia las listas de lugares de trabajo y estudio
 		workPlaces.clear();
 		schoolPlaces.clear();
-		
+		// Para no crear otra lista con Places susceptibles,
+		// reuso la de Buildings, y almaceno el indice ini y fin de Places.
+		susceptiblePlacesIdx = new int[] {susceptibleBuildings.size(), 0};
 		// Variables temporales
 		PlaceProperty placeProp;
 		PlaceProperty placeSecProp;
@@ -379,8 +400,10 @@ public class ContextCreator implements ContextBuilder<Object> {
 					// Si es lugar con atencion al publico, se agrega a la lista de actividades
 					buildingManager.addPlace(sectoralIdx, tempWorkspace, placeProp);
 				}
-				if (!tempWorkspace.isMosquitoesExcluded())
+				if (!tempWorkspace.isMosquitoesExcluded()) {
+					susceptibleBuildings.add(tempWorkspace);
 					buildingManager.addBuildingToBlock(block, tempWorkspace);
+				}
 				// Agregar al contexto
 				context.add(tempWorkspace);
 				geography.move(tempWorkspace, geom);
@@ -390,6 +413,11 @@ public class ContextCreator implements ContextBuilder<Object> {
 			}
 		}
 		features.clear();
+		
+		// Si no se agregaron nuevos Buildings, el indice inicial de Places es cero
+		if (susceptibleBuildings.size() == susceptiblePlacesIdx[0])
+			susceptiblePlacesIdx[0] = 0;
+		susceptiblePlacesIdx[1] = susceptibleBuildings.size() - 1;
 		
 		if (DEBUG_MSG) {
 			System.out.println("CUPO ESTUDIANTES TER/UNI: " + schoolVacancies);
@@ -635,29 +663,27 @@ public class ContextCreator implements ContextBuilder<Object> {
 	 */
 	private void initContainers() {
 		ContainerAgent.initAgentID(); // Reiniciar ID de contenedores
-		cleanupContainersList();
+		indoorContainers.clear();
+		outdoorContainers.clear();
 		
-		double areaMean = DataSet.CONTAINER_AREA_MEAN;
-		double areaStd = DataSet.CONTAINER_AREA_DEVIATION;
+		double areaMean   = DataSet.CONTAINER_AREA_MEAN;
+		double areaStd    = DataSet.CONTAINER_AREA_DEVIATION;
 		double heightMean = DataSet.CONTAINER_HEIGHT_MEAN;
-		double heightStd = DataSet.CONTAINER_HEIGHT_DEVIATION;
+		double heightStd  = DataSet.CONTAINER_HEIGHT_DEVIATION;
 		
 		// Dist. normal cantidad containers por Home
 		final Normal ndContainersPerHouse[] = new Normal[DataSet.SECTORALS_COUNT];
 	    // Dist. uniforme chance de container en interiores
 	    final Uniform udContainerIndoor = RandomHelper.createUniform(1, 100);
 	    // Dist. normal area de containers
-	    final Normal ndContainerArea = RandomHelper.createNormal(areaMean, areaStd);
+	    final Normal ndContainerArea   = RandomHelper.createNormal(areaMean, areaStd);
 	    // Dist. normal altura de containers
 	    final Normal ndContainerHeight = RandomHelper.createNormal(heightMean, heightStd);
 	    
 		for (int i = 0; i < DataSet.SECTORALS_COUNT; i++)
 			ndContainersPerHouse[i] = RandomHelper.createNormal(DataSet.CONTAINERS_PER_HOUSE_MEAN[i], DataSet.CONTAINERS_PER_HOUSE_DEVIATION[i]);
 		
-		context.getObjectsAsStream(BuildingAgent.class).forEach(building -> {
-	    	final BuildingAgent tempBuilding = (BuildingAgent) building;
-	    	if (tempBuilding.isMosquitoesExcluded())
-	    		return;
+		susceptibleBuildings.forEach(tempBuilding -> {
     		// La dist. normal de cantidad de contenedores no la limito (puede dar menor a 0)
 	    	for (int i = ndContainersPerHouse[tempBuilding.getSectoralIndex()].nextInt(); i > 0; i--) {
 	    		final boolean contIndoor = (udContainerIndoor.nextInt() <= DataSet.CONTAINER_INDOOR_CHANCE);
@@ -733,11 +759,6 @@ public class ContextCreator implements ContextBuilder<Object> {
 		int randomIndex;
 		BuildingAgent building;
 		
-		// Crea un array con los buildings donde pueden habitar los mosquitos
-		final BuildingAgent[] habitableBuildings = context.getObjectsAsStream(BuildingAgent.class)
-				.filter(b -> !((BuildingAgent) b).isMosquitoesExcluded())
-				.toArray(BuildingAgent[]::new);
-		
 		for (int i = 0; i < startingAdultsAmount; i++) {
 			if (indexesCount >= 0) { // Si quedan contenedores inside
 				randomIndex = RandomHelper.nextIntFromTo(0, indexesCount);
@@ -745,12 +766,71 @@ public class ContextCreator implements ContextBuilder<Object> {
 				ciIndexes[randomIndex] = ciIndexes[indexesCount--];
 			}
 			else { // Si no hay mas contenedores inside, busca un building random
-				randomIndex = RandomHelper.nextIntFromTo(0, habitableBuildings.length-1);
-				building = habitableBuildings[randomIndex];
+				randomIndex = RandomHelper.nextIntFromTo(0, susceptibleBuildings.size()-1);
+				building = susceptibleBuildings.get(randomIndex);
 			}
 			tempMosquito = new MosquitoAgent(building);
 			context.add(tempMosquito);
 		}
+	}
+	
+	/**
+	 * Calcula la cantidad de nuevos infectados por semana y
+	 * retorna el indice de semana y los dias de offset de inicio de simulacion.
+	 * @param infectedCount cantidad anual a infectar
+	 * @param monthlyPct porcentajes mensuales
+	 * @param infEveryWeek infectados semanales
+	 * @return <b>int[]</b> con incide semana y dias de offset de inicio
+	 */
+	private int[] getInfArrivalPerWeek(int infectedCount, int[] monthlyPct, int[] infEveryWeek) {
+		// Calcular cantidad por semana
+		int weekIdx = 0; // Indice semanal
+		for (int pct : monthlyPct) {
+			int infMonthly = (int) Math.round((infectedCount * pct) / 100.0);
+			int infWeekly = infMonthly >> 2;
+			infEveryWeek[weekIdx++] = infWeekly;
+			infMonthly -= infWeekly;
+			infEveryWeek[weekIdx++] = infWeekly;
+			infMonthly -= infWeekly;
+			infEveryWeek[weekIdx++] = infWeekly;
+			infMonthly -= infWeekly;
+			infEveryWeek[weekIdx++] = infMonthly;
+		}
+		
+		// Calcular indice anual de semana y dias de offset, segun fecha de inicio
+		int startingDate = Weather.getCurrentDay();
+		int startingWeek = (int) Math.round(startingDate / 7.6); // dias a semanas
+		// Calcular dia de offset
+		int startingDaysOffset = (int) (startingWeek * 7.6) - (startingDate - 1);
+		if (startingDaysOffset < 0) {
+			startingDaysOffset += 7;
+			++startingWeek;
+		}
+		// Limitar indice a 48 semanas anuales
+		if (startingWeek >= 48)
+			startingWeek -= 48;
+		return new int[] {startingWeek, startingDaysOffset};
+	}
+	
+	/**
+	 * Calcula la cantidad de nuevos infectados por semana
+	 * para todo el año y programa su ingreso semanal.
+	 */
+	private void scheduleInfectedArrival() {
+		// Obtener cantidad de humanos infectados por semana
+		int infHumansCount = (int) Math.round(fracOfInfHumans * DataSet.LOCAL_HUMANS);
+		humansInfEveryWeek = new int[48]; // semanal
+		getInfArrivalPerWeek(infHumansCount, DataSet.TRAVELERS_MONTHLY_PCT, humansInfEveryWeek);
+		// Obtener cantidad de mosquitos adultos infectados por semana
+		int infMosquitoesCount = (int) Math.round(fracOfInfMosquitoes * DataSet.LOCAL_HUMANS);
+		mosquitoesInfEveryWeek = new int[48]; // semanal
+		int[] startDays = getInfArrivalPerWeek(infMosquitoesCount, DataSet.TOURISTS_MONTHLY_PCT, mosquitoesInfEveryWeek);
+		// Programar metodo de ingreso semanal de infectados
+		simumationWeekIndex = startDays[0];
+		ScheduleParameters params = ScheduleParameters.createRepeating(
+				startDays[1] * 360,
+				7.6 * 360, ScheduleParameters.FIRST_PRIORITY);
+		schedule.schedule(params, this, "infectRandos");
 	}
 	
 	/**
@@ -804,40 +884,55 @@ public class ContextCreator implements ContextBuilder<Object> {
 	 * @param index en el listado de dias
 	 */
 	public void addContainers(int index) {
-		double areaMean = DataSet.CONTAINER_AREA_MEAN;
-		double areaStd = DataSet.CONTAINER_AREA_DEVIATION;
-		double heightMean = DataSet.CONTAINER_HEIGHT_MEAN;
-		double heightStd = DataSet.CONTAINER_HEIGHT_DEVIATION;
+		final double areaMean   = DataSet.CONTAINER_AREA_MEAN;
+		final double areaStd    = DataSet.CONTAINER_AREA_DEVIATION;
+		final double heightMean = DataSet.CONTAINER_HEIGHT_MEAN;
+		final double heightStd  = DataSet.CONTAINER_HEIGHT_DEVIATION;
 		
 	    // Dist. normal area de containers
-	    final Normal ndContainerArea = RandomHelper.createNormal(areaMean, areaStd);
+	    final Normal ndContainerArea   = RandomHelper.createNormal(areaMean, areaStd);
 	    // Dist. normal altura de containers
 	    final Normal ndContainerHeight = RandomHelper.createNormal(heightMean, heightStd);
 		
-		// Paso porcentaje a cantidad
+		// Pasar porcentaje a cantidad
 		containersAddPct[index] *= outdoorCtnrCount / 100;
-		context.getRandomObjectsAsStream(BuildingAgent.class, Long.MAX_VALUE).forEach(bldg -> {
-	    	if (containersAddPct[index] == 0)
-	    		return;
-	    	final BuildingAgent building = (BuildingAgent) bldg;
-	    	// Solo agrega containers donde es posible y en exteriores
-	    	if (building.isMosquitoesExcluded())
-	    		return;
-			double contArea = ndContainerArea.nextDouble();
+		final int buildingsCount = susceptibleBuildings.size()-1;
+		for (int i = 0; i < containersAddPct[index]; i++) {
+			int randomIndex = RandomHelper.nextIntFromTo(0, buildingsCount);
+			BuildingAgent building = susceptibleBuildings.get(randomIndex);
+			//
+			double contArea   = ndContainerArea.nextDouble();
 			double contHeight = ndContainerHeight.nextDouble();
 			// Limito el valor de area y altura a la media + desvio
 			// por que si no dan valores negativos y no entra ni un huevo 
-			contArea = Utils.limitStandardDeviation(contArea, areaMean, areaStd);
+			contArea   = Utils.limitStandardDeviation(contArea, areaMean, areaStd);
 			contHeight = Utils.limitStandardDeviation(contHeight, heightMean, heightStd);
 			//
 			ContainerAgent container = new ContainerAgent(building, false, contArea, contHeight);
 			building.insertContainer(container);
 			outdoorContainers.add(container);
 			context.add(container);
-			--containersAddPct[index];
-		});
+		}
 		if (DEBUG_MSG)
 			System.out.println("Cantidad de contenedores al exterior incrementada: " + outdoorContainers.size());
+	}
+	
+	/**
+	 * Crear mosquitos adultos infectados en workplaces habitables aleatorios.
+	 * @param amount cantidad a crear
+	 */
+	private void addInfectedMosquitos(int amount) {
+		MosquitoAgent adultMosquito;
+		BuildingAgent building;
+		int randomIndex;
+		while (amount > 0) {
+			randomIndex = RandomHelper.nextIntFromTo(susceptiblePlacesIdx[0], susceptiblePlacesIdx[1]);
+			building = susceptibleBuildings.get(randomIndex);
+			adultMosquito = new MosquitoAgent(building);
+			adultMosquito.infectTransmitter();
+			context.add(adultMosquito);
+			--amount;
+		}
 	}
 	
 	/**

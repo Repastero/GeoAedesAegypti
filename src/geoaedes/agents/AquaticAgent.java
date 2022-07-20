@@ -64,6 +64,7 @@ public class AquaticAgent {
 	public ContainerAgent getContainer() {
 		return container;
 	}
+	
 	public void setContainer(ContainerAgent container) {
 		this.container = container;
 	}

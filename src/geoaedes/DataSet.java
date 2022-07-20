@@ -36,8 +36,9 @@ public final class DataSet {
 	public static final int		ADULT_DIGESTION_PERIOD		= 2*360; // ticks entre alimentacion y ovoposicion
 	/** Distancia maxima lineal que puede volar el mosquito (en un solo viaje) */
 	public static final double	ADULT_MAX_TRAVEL_DISTANCE	= 0.00045;	// 50 metros segun Silvina (0.0009 son aprox 100m en pna)
-	
-	public static final double[]ADULT_CIRCADIAN_RHYTHMS		= {0.533305, 0.851309, 0.748998, 0.470186, 0.196326, 0.046506, 0.077455, 0.283536, 0.596751, 0.886741, 0.960782, 0.563789}; // un valor por horas simuladas
+	/** Probabilidades por hora de estar activo segun ciclos del ritmo circadiano */
+	public static final double[]ADULT_CIRCADIAN_RHYTHMS		= 
+		{0.533305, 0.851309, 0.748998, 0.470186, 0.196326, 0.046506, 0.077455, 0.283536, 0.596751, 0.886741, 0.960782, 0.563789}; // % sobre 1
 	
 	/** Altura media de huevos iniciales en contenedores */
 	public static final double	INITIAL_EGG_ELEVATION_MEAN 		= 8d; // cm
@@ -52,9 +53,11 @@ public final class DataSet {
 	public static final double	PEAK_SUN_HOURS	= 3;	// 3 horas de sol media
 	
 	/** Cantidad media de contenedores por casa, por seccional */
-	public static final double[]CONTAINERS_PER_HOUSE_MEAN		= {1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6};
+	public static final double[]CONTAINERS_PER_HOUSE_MEAN		= 
+		{1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6};
 	/** Desvio std de contenedores por casa, por seccional */
-	public static final double[]CONTAINERS_PER_HOUSE_DEVIATION	= {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+	public static final double[]CONTAINERS_PER_HOUSE_DEVIATION	= 
+		{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
 	/** Porcentaje de contenedores en interiores y de agua constante */
 	public static final int		CONTAINER_INDOOR_CHANCE		= 20;	// 20%
 	/** Porcentaje inicial de containers al exterior ocupados */
@@ -92,14 +95,17 @@ public final class DataSet {
 	public static final int FOREIGN_TRAVELER_HUMANS = 0; // TODO hace falta implementar?
 
 	/** Porcentaje de la poblacion en cada seccional */
-	public static final double[] SECTORALS_POPULATION = {6.6, 5.5, 3.8, 6.3, 5.1, 1.9, 1, 11.9, 2.2, 3, 6.1, 9.5, 10.5, 1, 8.3, 6.5, 8.6, 2.2}; // Fuente Abelardo | Padron Electoral
+	public static final double[] SECTORALS_POPULATION = 
+		{6.6, 5.5, 3.8, 6.3, 5.1, 1.9, 1, 11.9, 2.2, 3, 6.1, 9.5, 10.5, 1, 8.3, 6.5, 8.6, 2.2}; // Fuente Abelardo | Padron Electoral
 	/** Cantidad de seccionales */
 	public static final int SECTORALS_COUNT = SECTORALS_POPULATION.length;
 
 	/** Area en m2 para hogares - por seccional */
-	public static final int[] HOME_BUILDING_AREA = {80, 80, 80, 80, 100, 120, 120, 110, 120, 120, 120, 110, 90, 90, 110, 110, 90, 90}; // Fuente Catastro
+	public static final int[] HOME_BUILDING_AREA = 
+		{80, 80, 80, 80, 100, 120, 120, 110, 120, 120, 120, 110, 90, 90, 110, 110, 90, 90}; // Fuente Catastro
 	/** Area construida en m2 para hogares - por seccional */
-	public static final int[] HOME_BUILDING_COVERED_AREA = {100, 100, 100, 100, 120, 140, 140, 130, 140, 140, 140, 130, 140, 140, 130, 130, 130, 130}; // Fuente Catastro
+	public static final int[] HOME_BUILDING_COVERED_AREA = 
+		{100, 100, 100, 100, 120, 140, 140, 130, 140, 140, 140, 130, 140, 140, 130, 130, 130, 130}; // Fuente Catastro
 
 	/** Humanos con hogar dentro y trabajo/estudio fuera - Inventado */
 	public static final double LOCAL_HUMANS_PER_AGE_GROUP	= 20;
@@ -116,4 +122,11 @@ public final class DataSet {
 	
 	/** % sobre 100 de que al realizar actividades de ocio u otros salga del contexto */
 	public static final int TRAVEL_OUTSIDE_CHANCE = 40;
+	
+	/** Distribucion porcentual de turistas que ingresan con Dengue por cada mes (ene - dic) */
+	public static final int[] TRAVELERS_MONTHLY_PCT	= 
+		{ 6, 8,12,10,10,12,18,12, 4, 2, 2, 4}; // total 100%
+	/** Distribucion porcentual de personas que reingresan con Dengue por cada mes (ene - dic) */
+	public static final int[] TOURISTS_MONTHLY_PCT	= 
+		{ 4,20,22,32,10, 2, 4, 0, 0, 0, 2, 4}; // total 100%
 }

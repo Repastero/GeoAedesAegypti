@@ -1,6 +1,5 @@
 package geoaedes.agents;
 
-import java.util.Collections;
 import java.util.List;
 
 import geoaedes.BuildingManager;
@@ -16,6 +15,7 @@ import repast.simphony.engine.schedule.ISchedule;
 import repast.simphony.engine.schedule.ScheduleParameters;
 import repast.simphony.engine.schedule.ScheduledMethod;
 import repast.simphony.random.RandomHelper;
+import repast.simphony.util.SimUtilities;
 
 public class MosquitoAgent extends LifeCicle {
 	/** Puntero al contexto */
@@ -30,9 +30,9 @@ public class MosquitoAgent extends LifeCicle {
 	private int agentID = ++agentIDCounter;
 	
 	/** Puntero parcela actual */
-	private BuildingAgent currentBuilding = null;
+	private BuildingAgent currentBuilding;
 	/** Puntero humano objetivo actual */
-	private HumanAgent prey = null;
+	private HumanAgent prey;
 	/** Puntero ultima accion programada (ritmo circadiano) */
 	private ISchedulableAction lastScheduledAction;
 	
@@ -160,11 +160,20 @@ public class MosquitoAgent extends LifeCicle {
 		// Reinicia cantidad de picaduras
 		bitesRemQuota = bitesQuota;
 		//
-		activeIntervals = 0;
+		activeIntervals = 30;
 		inactiveIntervals = 0;
 		prevCycleActive = false;
-		//
-		ScheduleParameters params = ScheduleParameters.createRepeating(schedule.getTickCount(), 1, .7d); // 2 minutos				
+		bitesLastCycle = 0;
+		// Antes de comenzar a picar, se fija previamente a partir de que hora esta activo
+		int activeStartTime = (int) schedule.getTickCount();
+		int circadianCycle = (activeStartTime % 360) / 30; // 0 ... 11
+		while (RandomHelper.nextDoubleFromTo(0d, 1d) >= DataSet.ADULT_CIRCADIAN_RHYTHMS[circadianCycle]) {
+			// No activo
+			if (++circadianCycle >= 12)
+				circadianCycle = 0;
+			activeStartTime += 30;
+		}
+		ScheduleParameters params = ScheduleParameters.createRepeating(activeStartTime, 1, .7d); // 1 tick = 2 minutos				
 		lastScheduledAction = schedule.schedule(params, this, "seekAndBite");
 	}
 	
@@ -196,6 +205,7 @@ public class MosquitoAgent extends LifeCicle {
 			activeIntervals = 30; // por hasta una hora sigue buscando / picando
 		}
 		else {
+			prevCycleActive = false;
 			activeCycles = 0;
 			inactiveIntervals = 30; // por una hora no vuelve a picar
 		}
@@ -332,7 +342,11 @@ public class MosquitoAgent extends LifeCicle {
 	 * @return <b>true</b> si se elimino la accion
 	 */
 	public boolean removeLastSchAction() {
-		return schedule.removeAction(lastScheduledAction);
+		if (schedule.removeAction(lastScheduledAction)) {
+			lastScheduledAction = null;
+			return true;
+		}
+		return false;
 	}
 	
 	/**
@@ -387,7 +401,7 @@ public class MosquitoAgent extends LifeCicle {
 			maxContainers = availContainers.size();
 		// Si hay mas disponibles en parcela, mezcla el orden
 		else if (maxContainers < availContainers.size())
-			Collections.shuffle(availContainers);
+			SimUtilities.shuffle(availContainers, RandomHelper.getUniform());
 		
 		int eggsToLay = DataSet.ADULT_EGGS_PRODUCTION;
 		ContainerAgent container;
@@ -438,6 +452,8 @@ public class MosquitoAgent extends LifeCicle {
 		if (infected)
 			InfectionReport.removeInfectedMosquito();
 		//
+		if (lastScheduledAction != null)
+			stopLastSchAction();
 		context.remove(this);
 		--agentCount;
 	}
